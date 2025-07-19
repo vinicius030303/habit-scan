@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HabitScan – Scanner de Rotina</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    textarea {
+      width: 100%;
+      max-width: 600px;
+      height: 150px;
+      padding: 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: #1e293b;
+      color: #f8fafc;
+      margin-bottom: 1rem;
+      resize: none;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      margin: 0.5rem;
+      background-color: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background-color: #4f46e5;
+    }
+    #chartContainer {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 2rem;
+    }
+    .sentimento {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      font-style: italic;
+      color: #a5f3fc;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 HabitScan – Scanner de Rotina</h1>
+  <textarea id="inputText" placeholder="Descreva sua rotina do dia..."></textarea>
+  <div>
+    <button onclick="analisar()">Analisar Rotina</button>
+    <button onclick="exportarPDF()">📄 Exportar PDF</button>
+    <button onclick="mostrarHistorico()">🕓 Ver Histórico</button>
+  </div>
+  <div class="sentimento" id="sentimento"></div>
+  <div id="chartContainer">
+    <canvas id="habitChart"></canvas>
+  </div>
+  <script>
+    const categorias = {
+      sono: ["dormi", "acordei", "sono", "cama"],
+      exercicio: ["corri", "exercício", "treinei", "ginástica"],
+      estudo: ["estudei", "li", "aula", "prova"],
+      lazer: ["joguei", "filme", "descanso", "netflix"],
+      trabalho: ["trabalhei", "reunião", "job", "projeto"]
+    };
+    const positivas = ["bom", "ótimo", "feliz", "satisfeito", "incrível", "descanso"];
+    const negativas = ["cansado", "triste", "mal", "péssimo", "estressado"];
+    let chartInstance;
+    function detectarSentimento(texto) {
+      let score = 0;
+      positivas.forEach(p => { if (texto.includes(p)) score++; });
+      negativas.forEach(n => { if (texto.includes(n)) score--; });
+      if (score > 1) return "positivo";
+      if (score < -1) return "negativo";
+      return "neutro";
+    }
+    function classificar(texto) {
+      const resultado = [];
+      for (const [cat, palavras] of Object.entries(categorias)) {
+        let contagem = 0;
+        palavras.forEach(p => {
+          const regex = new RegExp(p, "gi");
+          contagem += (texto.match(regex) || []).length;
+        });
+        if (contagem > 0) {
+          resultado.push({ categoria: cat, horas: contagem });
+        }
+      }
+      return resultado;
+    }
+    function salvarHistorico(input, dados) {
+      const historico = JSON.parse(localStorage.getItem("habitScanHist")) || [];
+      historico.unshift({ input, dados, timestamp: new Date().toISOString() });
+      localStorage.setItem("habitScanHist", JSON.stringify(historico.slice(0, 5)));
+    }
+    function mostrarHistorico() {
+      const historico = JSON.parse(localStorage.getItem("habitScanHist")) || [];
+      alert(historico.map(h => `- ${new Date(h.timestamp).toLocaleString()}
+${h.input}`).join("\n\n"));
+    }
+    function analisar() {
+      const input = document.getElementById("inputText").value;
+      const dados = classificar(input);
+      const sentimento = detectarSentimento(input);
+      document.getElementById("sentimento").innerText = `Sentimento detectado: ${sentimento}`;
+      salvarHistorico(input, dados);
+      const labels = dados.map(d => d.categoria);
+      const valores = dados.map(d => d.horas);
+      const ctx = document.getElementById("habitChart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Atividades",
+            data: valores,
+            backgroundColor: "#6366f1",
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+    }
+    function exportarPDF() {
+      html2canvas(document.querySelector("#chartContainer")).then(canvas => {
+        const imgData = canvas.toDataURL("image/png");
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        pdf.addImage(imgData, "PNG", 10, 10, 190, 100);
+        pdf.save("habit-scan.pdf");
+      });
+    }
+  </script>
+</body>
+</html>
