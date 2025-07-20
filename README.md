@@ -20,10 +20,15 @@ Uma aplicação web interativa que transforma a descrição do seu dia em **grá
 
 Abra o `index.html` no navegador ou publique no GitHub Pages. Após carregar, escreva sua rotina e clique em “Analisar”.
 
-## 🌐 Online
-
-[GitHub Pages](https://seu-usuario.github.io/habit-scan)
-
 ## 📄 Licença
 
 MIT – Livre para uso pessoal ou profissional.
+
+## 🙋‍♂️ Autor
+
+Desenvolvido por [Vinicius Santos](https://linkedin.com/in/vinicius-front)
+
+📧 vinicius__santos@live.com  
+📱 (44) 9 9741-7617  
+
+> Tenho disciplina, autonomia, foco em solução e total interesse em crescer com projetos reais.
